@@ -1,83 +1,90 @@
 import tkinter as tk
-from tkinter import messagebox
 import random
+import pygame
 
-# دالة لإغلاق البرنامج
-def cancel():
-    window.destroy()
+# دالة لتشغيل الموسيقى
+def play_music():
+    pygame.mixer.music.load("Cyberpunk_2077_Main_Theme.mp3")  # تحميل ملف الموسيقى
+    pygame.mixer.music.play()  # تشغيل الموسيقى
 
-# دالة لحساب الحركات بناءً على الرقم المدخل
-def generate_key():
-    input_number = entry.get()
+# دالة لتوليد المفتاح
+def generator():
+    input_value = key_input.get()
 
-    # التحقق من صحة الإدخال (يجب أن يكون رقم مكون من 3 أرقام)
-    if len(input_number) != 3 or not input_number.isdigit():
-        messagebox.showwarning('إدخال غير صحيح', 'يجب إدخال رقم مكون من 3 أرقام!')
-        return
+    # التأكد من أن المدخل صالح
+    if input_value == '' or not input_value.isdigit() or int(input_value) > 999 or int(input_value) < 100:
+        tk.messagebox.showwarning('Error 449', 'The key cannot be generated!')
+    else:
+        elements = [0, 0, 0, 0, 0]
+        key = ""
+        element_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'  # القائمة التي تحتوي على الحروف والأرقام
 
-    input_number = list(map(int, input_number))  # تحويل الأرقام إلى قائمة من الأرقام الفردية
-    blocks = []
-    symbols = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        # توليد العنصر الأول
+        for i in range(5):
+            elements[i] += random.randint(0, 34)
+            key += element_list[elements[i]]
+        key += "-"
 
-    # توليد الجزء الأول من المفتاح
-    part1 = ''.join(random.choices(symbols, k=6))
-    blocks.append(part1)
+        # توليد العنصر الثاني
+        for i in range(4):
+            elements[i] += (int(input_value) // 100)
+            if elements[i] > 35:
+                elements[i] -= 10
+            elif elements[i] >= 26 and (elements[i] - (int(input_value) // 100)) <= 25:
+                elements[i] -= 25
+            key += element_list[elements[i]]
+        key += "-"
 
-    # الجزء الثاني: تحريك الجزء الأول بمقدار الرقم الأول في الإدخال
-    part2 = shift_string(part1, input_number[0])
-    blocks.append(part2)
+        # توليد العنصر الثالث
+        for i in range(3):
+            elements[i] -= ((int(input_value) // 10) % 10)
+            if elements[i] < 26 and (elements[i] + ((int(input_value) // 10) % 10)) > 25:
+                elements[i] += 10
+            elif elements[i] < 0:
+                elements[i] += 25
+            key += element_list[elements[i]]
+        key += "-"
 
-    # الجزء الثالث: تحريك الجزء الثاني بمقدار الرقم الثاني في الإدخال
-    part3 = shift_string(part2, -input_number[1])
-    blocks.append(part3)
+        # توليد العنصر الرابع
+        for i in range(2):
+            elements[i] += (int(input_value) % 10)
+            if elements[i] >= 35:
+                elements[i] -= 10
+            elif elements[i] >= 26 and (elements[i] - (int(input_value) % 100)) <= 25:
+                elements[i] -= 25
+            key += element_list[elements[i]]
+        key_output.delete("0", tk.END)  # مسح المحتوى القديم
+        key_output.insert(0, key)  # إدخال المفتاح الجديد
 
-    # الجزء الرابع: تحريك الجزء الثالث بمقدار الرقم الثالث في الإدخال
-    part4 = shift_string(part3, input_number[2])
-    blocks.append(part4)
+if __name__ == "__main__":
+    # إنشاء نافذة البرنامج
+    window = tk.Tk()
+    window.title('Key generator for Cyberpunk 2077')  # عنوان النافذة
+    window.geometry('1200x675')  # أبعاد النافذة
+    pygame.init()  # تهيئة مكتبة pygame
 
-    # تجميع المفتاح
-    final_key = '-'.join(blocks)
-    key_output.delete(0, tk.END)
-    key_output.insert(0, final_key)
+    # إضافة صورة الخلفية الخاصة بلعبة Cyberpunk 2077
+    bg_img = tk.PhotoImage(file='cyberpunk2077.png')  # تأكد من مسار الصورة
+    lbl_bg = tk.Label(window, image=bg_img)
+    lbl_bg.place(x=0, y=0, relwidth=1, relheight=1)
+    play_music()  # تشغيل الموسيقى
 
-# دالة لتحريك السلسلة (حروف وأرقام) حسب العدد المعطى
-def shift_string(s, shift):
-    shifted = ''
-    symbols = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    for char in s:
-        index = symbols.index(char)
-        new_index = (index + shift) % len(symbols)  # التأكد من أن التحريك يكون داخل النطاق
-        shifted += symbols[new_index]
-    return shifted
+    # إضافة المدخلات
+    input_label = tk.Label(window, text='Enter secret sequence (3 digits): ', font=14)
+    input_label.place(relx=0.195, rely=0.23)
+    key_input = tk.Entry(window, width=3, font=16)
+    key_input.insert(0, '000')  # قيمة افتراضية
+    key_input.place(relx=0.45, rely=0.23)
 
-# إعداد واجهة المستخدم
-window = tk.Tk()
-window.title('مولد مفتاح اللعبة')
-window.geometry('400x300')
+    # إضافة زر التوليد
+    btn_guess = tk.Button(window, text='Generate KEY', font=14, width=12, command=generator)
+    btn_guess.place(relx=0.195, rely=0.3)
 
-# إضافة صورة خلفية
-bg_img = tk.PhotoImage(file='gradient.png')  # تأكد من وجود هذه الصورة في المسار المناسب
-label_bg = tk.Label(window, image=bg_img)
-label_bg.place(x=0, y=0, relwidth=1, relheight=1)
+    # إضافة مخرج المفتاح
+    output_label = tk.Label(window, text='Game key: ', font=14)
+    output_label.place(relx=0.195, rely=0.385)
+    key_output = tk.Entry(window, width=30, font=16)
+    key_output.place(relx=0.29, rely=0.385)
 
-# واجهة المستخدم
-label_input = tk.Label(window, text='أدخل رقم مكون من 3 أرقام:', font=('Verdana', 12))
-label_input.place(relx=0.05, rely=0.1)
-
-entry = tk.Entry(window, width=5, font=('Verdana', 16))
-entry.place(relx=0.5, rely=0.1)
-
-btn_generate = tk.Button(window, text='توليد المفتاح', font=('Verdana', 12), command=generate_key)
-btn_generate.place(relx=0.05, rely=0.3)
-
-key_output_label = tk.Label(window, text='المفتاح المولد:', font=('Verdana', 12))
-key_output_label.place(relx=0.05, rely=0.5)
-
-key_output = tk.Entry(window, width=30, font=('Verdana', 16))
-key_output.place(relx=0.5, rely=0.5)
-
-btn_cancel = tk.Button(window, text='إلغاء', font=('Verdana', 12), command=cancel)
-btn_cancel.place(relx=0.5, rely=0.7)
-
-# بدء الحلقة الرئيسية للنافذة
-window.mainloop()
+    # بدء البرنامج
+    window.mainloop()

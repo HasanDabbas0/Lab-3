@@ -1,77 +1,83 @@
 import tkinter as tk
+from tkinter import messagebox
 import random
 
-class KeyGenApp:
-    def __init__(self, root):
-        self.window = root
-        self.window.title('مولد المفاتيح (الاختيار 8)')
-        self.window.geometry('500x350')
+# دالة لإغلاق البرنامج
+def cancel():
+    window.destroy()
 
-        self.setup_ui()
+# دالة لحساب الحركات بناءً على الرقم المدخل
+def generate_key():
+    input_number = entry.get()
 
-    def setup_ui(self):
-        """إعداد واجهة المستخدم."""
-        self.input_label = tk.Label(self.window, text='أدخل الرقم: ', font=14)
-        self.input_label.place(relx=0.195, rely=0.23)
+    # التحقق من صحة الإدخال (يجب أن يكون رقم مكون من 3 أرقام)
+    if len(input_number) != 3 or not input_number.isdigit():
+        messagebox.showwarning('إدخال غير صحيح', 'يجب إدخال رقم مكون من 3 أرقام!')
+        return
 
-        self.key_input = tk.Entry(self.window, width=3, font=16)
-        self.key_input.insert(0, '123')  # المدخل الافتراضي للمثال
-        self.key_input.place(relx=0.45, rely=0.23)
+    input_number = list(map(int, input_number))  # تحويل الأرقام إلى قائمة من الأرقام الفردية
+    blocks = []
+    symbols = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
-        self.btn_generate = tk.Button(self.window, text='توليد المفتاح', font=14, width=12, command=self.generate_key)
-        self.btn_generate.place(relx=0.195, rely=0.3)
+    # توليد الجزء الأول من المفتاح
+    part1 = ''.join(random.choices(symbols, k=6))
+    blocks.append(part1)
 
-        self.output_label = tk.Label(self.window, text='المفتاح الناتج: ', font=14)
-        self.output_label.place(relx=0.195, rely=0.385)
+    # الجزء الثاني: تحريك الجزء الأول بمقدار الرقم الأول في الإدخال
+    part2 = shift_string(part1, input_number[0])
+    blocks.append(part2)
 
-        self.key_output = tk.Entry(self.window, width=30, font=16)
-        self.key_output.place(relx=0.29, rely=0.385)
+    # الجزء الثالث: تحريك الجزء الثاني بمقدار الرقم الثاني في الإدخال
+    part3 = shift_string(part2, -input_number[1])
+    blocks.append(part3)
 
-    def generate_key(self):
-        """توليد المفتاح بناءً على المدخل."""
-        input_value = self.key_input.get()
+    # الجزء الرابع: تحريك الجزء الثالث بمقدار الرقم الثالث في الإدخال
+    part4 = shift_string(part3, input_number[2])
+    blocks.append(part4)
 
-        if not input_value.isdigit() or len(input_value) != 3:
-            tk.messagebox.showwarning('خطأ 449', 'المدخل غير صالح! يرجى إدخال رقم مكون من 3 أرقام.')
-            return
+    # تجميع المفتاح
+    final_key = '-'.join(blocks)
+    key_output.delete(0, tk.END)
+    key_output.insert(0, final_key)
 
-        key = self.create_key(input_value)
-        self.key_output.delete(0, tk.END)
-        self.key_output.insert(0, key)
+# دالة لتحريك السلسلة (حروف وأرقام) حسب العدد المعطى
+def shift_string(s, shift):
+    shifted = ''
+    symbols = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    for char in s:
+        index = symbols.index(char)
+        new_index = (index + shift) % len(symbols)  # التأكد من أن التحريك يكون داخل النطاق
+        shifted += symbols[new_index]
+    return shifted
 
-    def create_key(self, input_value):
-        """إنشاء المفتاح مع تطبيق التحريك بناءً على المدخل."""
-        input_digits = [int(digit) for digit in input_value]
+# إعداد واجهة المستخدم
+window = tk.Tk()
+window.title('مولد مفتاح اللعبة')
+window.geometry('400x300')
 
-        # إنشاء الكتلة الأولى بمزيج عشوائي من الحروف والأرقام
-        key = []
-        key.append(self.generate_random_block())
+# إضافة صورة خلفية
+bg_img = tk.PhotoImage(file='gradient.png')  # تأكد من وجود هذه الصورة في المسار المناسب
+label_bg = tk.Label(window, image=bg_img)
+label_bg.place(x=0, y=0, relwidth=1, relheight=1)
 
-        # إنشاء الكتل التالية مع تطبيق التحريك
-        for i, shift in enumerate(input_digits):
-            if i % 2 == 0:  # الأرقام الزوجية: التحريك لليمين
-                key.append(self.shift_string(key[i], shift, direction='right'))
-            else:  # الأرقام الفردية: التحريك لليسار
-                key.append(self.shift_string(key[i], shift, direction='left'))
+# واجهة المستخدم
+label_input = tk.Label(window, text='أدخل رقم مكون من 3 أرقام:', font=('Verdana', 12))
+label_input.place(relx=0.05, rely=0.1)
 
-        return '-'.join(key)
+entry = tk.Entry(window, width=5, font=('Verdana', 16))
+entry.place(relx=0.5, rely=0.1)
 
-    def generate_random_block(self):
-        """إنشاء كتلة عشوائية مكونة من حروف وأرقام."""
-        characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        return ''.join(random.choice(characters) for _ in range(5))
+btn_generate = tk.Button(window, text='توليد المفتاح', font=('Verdana', 12), command=generate_key)
+btn_generate.place(relx=0.05, rely=0.3)
 
-    def shift_string(self, block, shift, direction='right'):
-        """تحريك الحروف في الكتلة لليسار أو لليمين."""
-        block_list = list(block)
-        shift = shift % len(block_list)  # ضمان أن التحريك داخل الحدود
+key_output_label = tk.Label(window, text='المفتاح المولد:', font=('Verdana', 12))
+key_output_label.place(relx=0.05, rely=0.5)
 
-        if direction == 'right':
-            return ''.join(block_list[-shift:] + block_list[:-shift])
-        elif direction == 'left':
-            return ''.join(block_list[shift:] + block_list[:shift])
+key_output = tk.Entry(window, width=30, font=('Verdana', 16))
+key_output.place(relx=0.5, rely=0.5)
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = KeyGenApp(root)
-    root.mainloop()
+btn_cancel = tk.Button(window, text='إلغاء', font=('Verdana', 12), command=cancel)
+btn_cancel.place(relx=0.5, rely=0.7)
+
+# بدء الحلقة الرئيسية للنافذة
+window.mainloop()

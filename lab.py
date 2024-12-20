@@ -1,90 +1,76 @@
 import tkinter as tk
+from tkinter import messagebox
+from PIL import Image, ImageTk  # Для работы с изображениями
+import pygame  # Для воспроизведения музыки
 import random
-import pygame
 
-# دالة لتشغيل الموسيقى
-def play_music():
-    pygame.mixer.music.load("Cyberpunk_2077_Main_Theme.mp3")  # تحميل ملف الموسيقى
-    pygame.mixer.music.play()  # تشغيل الموسيقى
+def generate_key():
+    dec_input = entry_input.get()
+    if not dec_input.isdigit() or len(dec_input) != 3:
+        messagebox.showerror("Ошибка", "Введите DEC-число из 3 знаков.")
+        return
 
-# دالة لتوليد المفتاح
-def generator():
-    input_value = key_input.get()
+    dec_digits = [int(d) for d in dec_input]
+    blocks = []
+    shift_direction = 1  # Начинаем сдвиг вправо
 
-    # التأكد من أن المدخل صالح
-    if input_value == '' or not input_value.isdigit() or int(input_value) > 999 or int(input_value) < 100:
-        tk.messagebox.showwarning('Error 449', 'The key cannot be generated!')
-    else:
-        elements = [0, 0, 0, 0, 0]
-        key = ""
-        element_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'  # القائمة التي تحتوي على الحروف والأرقام
+    # Генерация первого блока (случайные буквы и цифры)
+    first_block = ''.join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=5))
+    blocks.append(first_block)
 
-        # توليد العنصر الأول
-        for i in range(5):
-            elements[i] += random.randint(0, 34)
-            key += element_list[elements[i]]
-        key += "-"
+    # Генерация последующих блоков с учётом сдвигов
+    current_block = first_block
+    for shift in dec_digits:
+        current_block = shift_block(current_block, shift, shift_direction)
+        blocks.append(current_block[:-1])  # Уменьшаем длину блока на 1
+        shift_direction *= -1  # Меняем направление сдвига
 
-        # توليد العنصر الثاني
-        for i in range(4):
-            elements[i] += (int(input_value) // 100)
-            if elements[i] > 35:
-                elements[i] -= 10
-            elif elements[i] >= 26 and (elements[i] - (int(input_value) // 100)) <= 25:
-                elements[i] -= 25
-            key += element_list[elements[i]]
-        key += "-"
+    generated_key = "-".join(blocks)
+    entry_output.delete(0, tk.END)
+    entry_output.insert(0, generated_key)
 
-        # توليد العنصر الثالث
-        for i in range(3):
-            elements[i] -= ((int(input_value) // 10) % 10)
-            if elements[i] < 26 and (elements[i] + ((int(input_value) // 10) % 10)) > 25:
-                elements[i] += 10
-            elif elements[i] < 0:
-                elements[i] += 25
-            key += element_list[elements[i]]
-        key += "-"
+def shift_block(block, shift, direction):
+    """Выполняет сдвиг символов блока на заданное количество позиций."""
+    symbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    result = []
+    for char in block:
+        idx = symbols.index(char)
+        new_idx = (idx + direction * shift) % len(symbols)
+        result.append(symbols[new_idx])
+    return ''.join(result)
 
-        # توليد العنصر الرابع
-        for i in range(2):
-            elements[i] += (int(input_value) % 10)
-            if elements[i] >= 35:
-                elements[i] -= 10
-            elif elements[i] >= 26 and (elements[i] - (int(input_value) % 100)) <= 25:
-                elements[i] -= 25
-            key += element_list[elements[i]]
-        key_output.delete("0", tk.END)  # مسح المحتوى القديم
-        key_output.insert(0, key)  # إدخال المفتاح الجديد
+# Настройка интерфейса
+root = tk.Tk()
+root.title("Keygen - Вариант 8")
+root.geometry("400x300")
+root.resizable(False, False)
 
-if __name__ == "__main__":
-    # إنشاء نافذة البرنامج
-    window = tk.Tk()
-    window.title('Key generator for Cyberpunk 2077')  # عنوان النافذة
-    window.geometry('1200x675')  # أبعاد النافذة
-    pygame.init()  # تهيئة مكتبة pygame
+# Настройка музыки
+pygame.mixer.init()
+pygame.mixer.music.load("background_music.mp3")  # Замените на название вашего файла музыки
+pygame.mixer.music.play(-1)  # Бесконечное воспроизведение
 
-    # إضافة صورة الخلفية الخاصة بلعبة Cyberpunk 2077
-    bg_img = tk.PhotoImage(file='cyberpunk2077.png')  # تأكد من مسار الصورة
-    lbl_bg = tk.Label(window, image=bg_img)
-    lbl_bg.place(x=0, y=0, relwidth=1, relheight=1)
-    play_music()  # تشغيل الموسيقى
+# Настройка фона
+image = Image.open("background_image.jpg")  # Замените на название вашего файла изображения
+photo = ImageTk.PhotoImage(image)
+background_label = tk.Label(root, image=photo)
+background_label.place(relwidth=1, relheight=1)
 
-    # إضافة المدخلات
-    input_label = tk.Label(window, text='Enter secret sequence (3 digits): ', font=14)
-    input_label.place(relx=0.195, rely=0.23)
-    key_input = tk.Entry(window, width=3, font=16)
-    key_input.insert(0, '000')  # قيمة افتراضية
-    key_input.place(relx=0.45, rely=0.23)
+# Ввод DEC-числа
+label_input = tk.Label(root, text="Введите DEC-число (3 знака):", bg="lightblue", font=("Arial", 12))
+label_input.pack(pady=10)
+entry_input = tk.Entry(root, font=("Arial", 12), justify="center")
+entry_input.pack(pady=5)
 
-    # إضافة زر التوليد
-    btn_guess = tk.Button(window, text='Generate KEY', font=14, width=12, command=generator)
-    btn_guess.place(relx=0.195, rely=0.3)
+# Кнопка генерации
+btn_generate = tk.Button(root, text="Сгенерировать ключ", font=("Arial", 12), command=generate_key)
+btn_generate.pack(pady=10)
 
-    # إضافة مخرج المفتاح
-    output_label = tk.Label(window, text='Game key: ', font=14)
-    output_label.place(relx=0.195, rely=0.385)
-    key_output = tk.Entry(window, width=30, font=16)
-    key_output.place(relx=0.29, rely=0.385)
+# Поле вывода ключа
+label_output = tk.Label(root, text="Сгенерированный ключ:", bg="lightblue", font=("Arial", 12))
+label_output.pack(pady=10)
+entry_output = tk.Entry(root, font=("Arial", 12), justify="center", state="readonly")
+entry_output.pack(pady=5)
 
-    # بدء البرنامج
-    window.mainloop()
+# Запуск приложения
+root.mainloop()

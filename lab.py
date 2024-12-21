@@ -1,76 +1,117 @@
 import tkinter as tk
-from tkinter import messagebox
-from PIL import Image, ImageTk  # Для работы с изображениями
-import pygame  # Для воспроизведения музыки
 import random
+import string
+from tkinter import messagebox
+import pygame
+
+# Global variables for UI components
+window = None
+dec_input_entry = None
+key_display = None
 
 def generate_key():
-    dec_input = entry_input.get()
+    """Generates a key based on a 3-digit DEC input."""
+    dec_input = dec_input_entry.get().strip()
+    
+    # Validate the input (must be a 3-digit DEC number)
     if not dec_input.isdigit() or len(dec_input) != 3:
-        messagebox.showerror("Ошибка", "Введите DEC-число из 3 знаков.")
+        messagebox.showerror("Error", "Please enter a valid 3-digit DEC number.")
         return
 
-    dec_digits = [int(d) for d in dec_input]
-    blocks = []
-    shift_direction = 1  # Начинаем сдвиг вправо
+    # Extract shifts from the input
+    shifts = [int(digit) for digit in dec_input]
+    key_parts = []
+    current_length = 5
 
-    # Генерация первого блока (случайные буквы и цифры)
-    first_block = ''.join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=5))
-    blocks.append(first_block)
+    # Generate key blocks with alternating shifts
+    for i, shift in enumerate(shifts):
+        block = ''.join(random.choices(string.ascii_uppercase + string.digits, k=current_length))
+        if i % 2 == 0:
+            block = shift_string(block, shift)
+        else:
+            block = shift_string(block, -shift)
+        key_parts.append(block)
+        current_length -= 1  
 
-    # Генерация последующих блоков с учётом сдвигов
-    current_block = first_block
-    for shift in dec_digits:
-        current_block = shift_block(current_block, shift, shift_direction)
-        blocks.append(current_block[:-1])  # Уменьшаем длину блока на 1
-        shift_direction *= -1  # Меняем направление сдвига
+    # Add the final block with 2 characters
+    last_block = ''.join(random.choices(string.ascii_uppercase + string.digits, k=2))
+    key_parts.append(last_block)
 
-    generated_key = "-".join(blocks)
-    entry_output.delete(0, tk.END)
-    entry_output.insert(0, generated_key)
+    # Join blocks to form the key and display it
+    key = '-'.join(key_parts)
+    key_display.delete(0, tk.END)
+    key_display.insert(0, key)
 
-def shift_block(block, shift, direction):
-    """Выполняет сдвиг символов блока на заданное количество позиций."""
-    symbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    result = []
-    for char in block:
-        idx = symbols.index(char)
-        new_idx = (idx + direction * shift) % len(symbols)
-        result.append(symbols[new_idx])
-    return ''.join(result)
+def shift_string(s, shift):
+    """Shifts characters in the string by a specified amount."""
+    characters = string.ascii_uppercase + string.digits
+    shifted = []
+    
+    for char in s:
+        if char in characters:
+            index = characters.index(char)
+            new_index = (index + shift) % len(characters)
+            shifted.append(characters[new_index])
+        else:
+            shifted.append(char)
+    
+    return ''.join(shifted)
 
-# Настройка интерфейса
-root = tk.Tk()
-root.title("Keygen - Вариант 8")
-root.geometry("400x300")
-root.resizable(False, False)
+def animate_frame(frame):
+    """Animates the background color of a frame."""
+    colors = ['#FF4500', '#FFD700', '#32CD32', '#1E90FF', '#8A2BE2']
+    
+    def change_color(index):
+        frame.config(bg=colors[index % len(colors)])
+        window.after(500, change_color, index + 1)
+    
+    change_color(0)
 
-# Настройка музыки
-pygame.mixer.init()
-pygame.mixer.music.load("background_music.mp3")  # Замените на название вашего файла музыки
-pygame.mixer.music.play(-1)  # Бесконечное воспроизведение
+def setup_ui():
+    """Sets up the user interface for the key generator."""
+    global window, dec_input_entry, key_display
 
-# Настройка фона
-image = Image.open("background_image.jpg")  # Замените на название вашего файла изображения
-photo = ImageTk.PhotoImage(image)
-background_label = tk.Label(root, image=photo)
-background_label.place(relwidth=1, relheight=1)
+    window = tk.Tk()
+    window.title("Cyber Dabbas 2024")
+    window.geometry("1300x750")
 
-# Ввод DEC-числа
-label_input = tk.Label(root, text="Введите DEC-число (3 знака):", bg="lightblue", font=("Arial", 12))
-label_input.pack(pady=10)
-entry_input = tk.Entry(root, font=("Arial", 12), justify="center")
-entry_input.pack(pady=5)
+    # Set up the background image
+    bg_image = tk.PhotoImage(file="background_image.png")
+    window.bg_image = bg_image  # Prevent garbage collection of the image
+    background_label = tk.Label(window, image=bg_image)
+    background_label.place(relwidth=1, relheight=1)
 
-# Кнопка генерации
-btn_generate = tk.Button(root, text="Сгенерировать ключ", font=("Arial", 12), command=generate_key)
-btn_generate.pack(pady=10)
+    # Create a frame for input and buttons
+    frame = tk.Frame(window, borderwidth=3, relief="ridge", bg='#006400')
+    frame.pack(padx=5, pady=5)
+    frame.place(x=569, y=448)
+    
+    # Input label and entry
+    dec_input_label = tk.Label(frame, text="Enter a 3-digit DEC number:", bg='white', fg='black')
+    dec_input_label.pack(pady=5, padx=5)
+    
+    dec_input_entry = tk.Entry(window, bg='#006400', fg="white", font=("Arial", 12))
+    dec_input_entry.pack(pady=5)
+    dec_input_entry.place(relx=0.444, rely=0.65)
 
-# Поле вывода ключа
-label_output = tk.Label(root, text="Сгенерированный ключ:", bg="lightblue", font=("Arial", 12))
-label_output.pack(pady=10)
-entry_output = tk.Entry(root, font=("Arial", 12), justify="center", state="readonly")
-entry_output.pack(pady=5)
+    # Button to generate the key
+    generate_button = tk.Button(window, text="Generate Key", command=generate_key, bg='#4682B4', fg='white', font=("Arial", 12))
+    generate_button.pack(pady=3, padx=10)
+    generate_button.place(x=580, y=525)
 
-# Запуск приложения
-root.mainloop()
+    # Output entry for the generated key
+    key_display = tk.Entry(window, font=("Arial", 14), bg='#006400', justify='center', fg="white")
+    key_display.pack(pady=10)
+    key_display.place(relx=0.45, rely=0.75)
+
+    # Play background music
+    pygame.mixer.init()
+    pygame.mixer.music.load("background-music.mp3")
+    pygame.mixer.music.play(-1)
+
+    # Start frame animation
+    animate_frame(frame)
+
+if __name__ == "__main__":
+    setup_ui()
+    window.mainloop()
